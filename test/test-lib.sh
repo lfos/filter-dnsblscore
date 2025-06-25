@@ -1,5 +1,6 @@
-[ -z "$FILTER_BIN" ] && FILTER_BIN="$(pwd)/../filter-senderscore"
+[ -z "$FILTER_BIN" ] && FILTER_BIN="$(pwd)/../filter-dnsblscore"
 [ -z "$FILTER_OPTS" ] && FILTER_OPTS='-testMode'
+FILTER_DOMAINS='b.barracudacentral.org bl.spamcop.net'
 
 test_init() {
 	TEST_DIR="$(mktemp -d)"

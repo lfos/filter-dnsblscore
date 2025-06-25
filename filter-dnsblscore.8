@@ -12,33 +12,34 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .Dd April 12, 2020
-.Dt FILTER-SENDERSCORE 8
+.Dt FILTER-DNSBLSCORE 8
 .Os
 .Sh NAME
-.Nm filter-senderscore
-.Nd SenderScore filter for OpenSMTPD
+.Nm filter-dnsblscore
+.Nd DNSBL filter for OpenSMTPD
 .Sh SYNOPSIS
-.Nm filter-senderscore
-.Op Fl blockBelow Ar score
+.Nm filter-dnsblscore
+.Op Fl blockAbove Ar score
 .Op Fl blockPhase Ar phase
-.Op Fl junkBelow  Ar score
+.Op Fl junkAbove  Ar score
 .Op Fl slowFactor Ar factor
 .Op Fl scoreHeader
+.Ar <domain>...
 .Sh DESCRIPTION
 The
 .Nm
 filter for the OpenSMTPD
 .Pq Xr smtpd 8
-server filters sessions based on their SenderScores reputation score.
+server filters sessions based on DNSBL queries.
 Its options are:
 .Bl -tag -width scoreHeader
-.It Fl blockBelow Ar score
-Displays an error banner for sessions with a reputation score below
+.It Fl blockAbove Ar score
+Displays an error banner for sessions on more than
 .Ar score
-and then disconnects.
+blocklists and then disconnects.
 .It Fl blockPhase Ar phase
 Determines at which phase
-.Fl blockBelow
+.Fl blockAbove
 is triggered.
 The default is
 .Ar connect .
@@ -57,20 +58,23 @@ Note that
 will result in a message at the end of a session and may only be used to warn
 the sender that its reputation is degrading, as it will not prevent transactions
 from succeeding.
-.It Fl junkBelow Ar score
+.It Fl junkAbove Ar score
 Prepends a
 .Ql X-Spam: yes
-header to messages for sessions with a reputation score below
-.Ar score .
+header to messages for sessions on more than
+.Ar score
+blocklists.
 .It Fl slowFactor Ar factor
 Delays all answers by this many milliseconds, where
 .Ql score
-is the reputation score:
-.Dl factor \(mi ((factor \(di 100) \(** score)
+is the blocklist score and
+.Ql domains
+is the total number of blocklists.
+.Dl factor \(** score \(di domains
 .It Fl scoreHeader
 Adds an
-.Ql X-SenderScore
-header with the sender's reputation score if known.
+.Ql X-DNSBL-Score
+header with the sender's blocklist score if known.
 .El
 .Sh EXIT STATUS
 .Ex -std
@@ -81,18 +85,23 @@ enables
 .Nm
 for all incoming connections.
 .Bd -literal
-filter "senderscore" proc-exec \\
-       "/usr/local/bin/filter-senderscore -blockBelow 50 \\
-                                          -junkBelow  80 \\
-                                          -slowFactor 1000"
+filter "dnsblscore" proc-exec \\
+       "/usr/local/bin/filter-dnsblscore -blockAbove 1 \\
+                                         -junkAbove  0 \\
+                                         -slowFactor 1000 \\
+                                         b.barracudacentral.org \\
+                                         bl.spamcop.net"
 
-listen on all filter "senderscore"
+listen on all filter "dnsblscore"
 .Ed
 .Sh SEE ALSO
 .Xr smtpd.conf 5
 .Sh AUTHORS
 .Nm
-is Copyright \(co 2019
+is Copyright \(co 2025
+.An -nosplit
+.An Lukas Fleischer Aq Mt lfleischer@lfos.de
+and Copyright \(co 2019-2021
 .An -nosplit
 .An Gilles Chehade Aq Mt gilles@poolp.org .
 This man page is Copyright \(co 2020

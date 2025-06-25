@@ -9,7 +9,7 @@ test_run 'test IP address allowlisting' '
 	1.1.1.1
 	3.3.3.3
 	EOD
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockBelow 20 -allowlist allowlist | sed "0,/^register|ready/d" >actual &&
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 0 -allowlist allowlist $FILTER_DOMAINS | sed "0,/^register|ready/d" >actual &&
 	config|ready
 	report|0.5|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.1.1.1:33174|1.1.1.1:25
 	filter|0.5|0|smtp-in|connect|7641df9771b4ed00|1ef1c203cc576e5d||pass|1.1.1.1:33174|1.1.1.1:25
@@ -32,7 +32,7 @@ test_run 'test subnet allowlisting' '
 	1.2.3.0/24
 	2.0.0.0/8
 	EOD
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockBelow 20 -allowlist allowlist | sed "0,/^register|ready/d" >actual &&
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 0 -allowlist allowlist $FILTER_DOMAINS | sed "0,/^register|ready/d" >actual &&
 	config|ready
 	report|0.5|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.1.1.1:33174|1.1.1.1:25
 	filter|0.5|0|smtp-in|connect|7641df9771b4ed00|1ef1c203cc576e5d||pass|1.1.1.1:33174|1.1.1.1:25

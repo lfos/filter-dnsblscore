@@ -1,5 +1,6 @@
 //
-// Copyright (c) 2019 Gilles Chehade <gilles@poolp.org>
+// Copyright (c) 2025 Lukas Fleischer <lfleischer@lfos.de>
+// Copyright (c) 2019-2021 Gilles Chehade <gilles@poolp.org>
 //
 // Permission to use, copy, modify, and distribute this software for any
 // purpose with or without fee is hereby granted, provided that the above
@@ -29,9 +30,10 @@ import (
 	"time"
 )
 
-var blockBelow *int
+var domains []string
+var blockAbove *int
 var blockPhase *string
-var junkBelow *int
+var junkAbove *int
 var slowFactor *int
 var scoreHeader *bool
 var allowlistFile *string
@@ -46,7 +48,6 @@ var outputChannel chan string
 type session struct {
 	id string
 
-	category int8
 	score    int8
 
 	delay      int
@@ -101,37 +102,33 @@ func linkConnect(phase string, sessionId string, params []string) {
 		query := fmt.Sprintf("%s/%d", maskedAddr, maskOnes)
 		if allowlist[query] {
 			fmt.Fprintf(os.Stderr, "IP address %s matches allowlisted subnet %s\n", addr, query)
-			s.score = 100
+			s.score = 0
 			return
 		}
 	}
 
 	atoms := strings.Split(addr.String(), ".")
 
+	var score int64 = 0
 	if *testMode {
-		// if test mode is enabled, the Sender Score DNS query is
-		// skipped and the score is derived directly from the
-		// connecting IP address; IP addresses ending with 255 can be
-		// used to simulate missing Sender Score DNS entries
+		// if test mode is enabled, the DNS queries are skipped and the
+		// score is derived directly from the connecting IP address; IP
+		// addresses ending with 255 can be used to simulate missing
+		// DNS entries
 		if atoms[3] == "255" {
 			return
 		}
+		score, _ = strconv.ParseInt(atoms[3], 10, 8)
 	} else {
-		addrs, _ := net.LookupIP(fmt.Sprintf("%s.%s.%s.%s.score.senderscore.com",
-			atoms[3], atoms[2], atoms[1], atoms[0]))
-
-		if len(addrs) != 1 {
-			return
+		for _, domain := range domains {
+			addrs, err := net.LookupIP(fmt.Sprintf("%s.%s.%s.%s.%s",
+				atoms[3], atoms[2], atoms[1], atoms[0], domain))
+			if err == nil && len(addrs) > 0 {
+				score += 1
+			}
 		}
-
-		resolved := addrs[0].String()
-		atoms = strings.Split(resolved, ".")
 	}
 
-	category, _ := strconv.ParseInt(atoms[2], 10, 8)
-	score, _ := strconv.ParseInt(atoms[3], 10, 8)
-
-	s.category = int8(category)
 	s.score = int8(score)
 }
 
@@ -153,16 +150,16 @@ func getSession(sessionId string) *session {
 func filterConnect(phase string, sessionId string, params []string) {
 	s := getSession(sessionId)
 
-	if *slowFactor > 0 && s.score >= 0 {
-		s.delay = *slowFactor * (100 - int(s.score)) / 100
+	if *slowFactor > 0 && s.score > 0 {
+		s.delay = *slowFactor * int(s.score) / len(domains)
 	} else {
 		// no slow factor or neutral IP address
 		s.delay = 0
 	}
 
-	if s.score != -1 && s.score < int8(*blockBelow) && *blockPhase == "connect" {
+	if s.score != -1 && int8(*blockAbove) >= 0 && s.score > int8(*blockAbove) && *blockPhase == "connect" {
 		delayedDisconnect(sessionId, params)
-	} else if s.score != -1 && s.score < int8(*junkBelow) {
+	} else if s.score != -1 && int8(*junkAbove) >= 0 && s.score > int8(*junkAbove) {
 		delayedJunk(sessionId, params)
 	} else {
 		delayedProceed(sessionId, params)
@@ -196,7 +193,7 @@ func dataline(phase string, sessionId string, params []string) {
 
 	if s.first_line == true {
 		if s.score != -1 && *scoreHeader {
-			produceOutput("filter-dataline", sessionId, token, "X-SenderScore: %d", s.score)
+			produceOutput("filter-dataline", sessionId, token, "X-DNSBL-Score: %d", s.score)
 		}
 		s.first_line = false
 	}
@@ -207,7 +204,7 @@ func dataline(phase string, sessionId string, params []string) {
 func delayedAnswer(phase string, sessionId string, params []string) {
 	s := getSession(sessionId)
 
-	if s.score != -1 && s.score < int8(*blockBelow) && *blockPhase == phase {
+	if s.score != -1 && int8(*blockAbove) >= 0 && s.score > int8(*blockAbove) && *blockPhase == phase {
 		delayedDisconnect(sessionId, params)
 		return
 	}
@@ -335,15 +332,27 @@ func loadAllowlists() {
 }
 
 func main() {
-	blockBelow = flag.Int("blockBelow", -1, "score below which session is blocked")
-	blockPhase = flag.String("blockPhase", "connect", "phase at which blockBelow triggers")
-	junkBelow = flag.Int("junkBelow", -1, "score below which session is junked")
+	flag.Usage = func() {
+		w := flag.CommandLine.Output()
+		fmt.Fprintf(w, "Usage of %s: [<flags>] <domain>...\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+
+	blockAbove = flag.Int("blockAbove", -1, "score below which session is blocked")
+	blockPhase = flag.String("blockPhase", "connect", "phase at which blockAbove triggers")
+	junkAbove = flag.Int("junkAbove", -1, "score below which session is junked")
 	slowFactor = flag.Int("slowFactor", -1, "delay factor to apply to sessions")
-	scoreHeader = flag.Bool("scoreHeader", false, "add X-SenderScore header")
+	scoreHeader = flag.Bool("scoreHeader", false, "add X-DNSBL-Score header")
 	allowlistFile = flag.String("allowlist", "", "file containing a list of IP addresses or subnets in CIDR notation to allowlist, one per line")
 	testMode = flag.Bool("testMode", false, "skip all DNS queries, process all requests sequentially, only for debugging purposes")
 
 	flag.Parse()
+	domains = flag.Args()
+
+	if len(domains) == 0 {
+		flag.Usage()
+		log.Fatal("missing blocklist domains")
+	}
 
 	validatePhase(*blockPhase)
 	loadAllowlists()

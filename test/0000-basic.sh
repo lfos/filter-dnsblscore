@@ -5,7 +5,7 @@
 test_init
 
 test_run 'initialization' '
-	echo "config|ready" | "$FILTER_BIN" $FILTER_OPTS | sort >actual &&
+	echo "config|ready" | "$FILTER_BIN" $FILTER_OPTS $FILTER_DOMAINS | sort >actual &&
 	cat <<-EOD >expected &&
 	register|filter|smtp-in|auth
 	register|filter|smtp-in|commit
@@ -26,28 +26,28 @@ test_run 'initialization' '
 '
 
 test_run 'test behavior with invalid stream' '
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockBelow 20 >&2; [ "$?" -eq 1 ]
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 1 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
 	config|ready
 	invalid|0.5|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.2.3.4:33174|1.1.1.1:25
 	EOD
 '
 
 test_run 'test behavior with invalid phase' '
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockBelow 20 >&2; [ "$?" -eq 1 ]
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 1 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
 	config|ready
 	report|0.5|0|smtp-in|invalid|7641df9771b4ed00||pass|1.2.3.4:33174|1.1.1.1:25
 	EOD
 '
 
 test_run 'test behavior with too few atoms' '
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockBelow 20 >&2; [ "$?" -eq 1 ]
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 1 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
 	config|ready
 	report|0.5|0|smtp-in|link-connect
 	EOD
 '
 
 test_run 'test behavior with invalid session ID' '
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockBelow 20 >&2; [ "$?" -eq 1 ]
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 1 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
 	config|ready
 	report|0.5|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.2.3.4:33174|1.1.1.1:25
 	filter|0.5|0|smtp-in|connect|7641df9771b4ed01|1ef1c203cc576e5d||pass|1.2.3.4:33174|1.1.1.1:25

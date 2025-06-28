@@ -43,7 +43,11 @@ The filter itself requires no configuration.
 
 It must be declared in smtpd.conf and attached to a listener:
 ```
-filter "dnsblscore" proc-exec "/usr/local/bin/filter-dnsblscore -junkAbove 0 -blockAbove 50 -slowFactor 1000 b.barracudacentral.org:60 bl.spamcop.net:40"
+filter "dnsblscore" \
+    proc-exec "/usr/local/bin/filter-dnsblscore \
+        -junkAbove 0 -blockAbove 50 -slowFactor 1000 \
+        b.barracudacentral.org:60 \
+        bl.spamcop.net:40"
 
 listen on all filter "dnsblscore"
 ```
@@ -52,7 +56,7 @@ listen on all filter "dnsblscore"
 
 `-blockPhase` will determine at which phase `-blockAbove` will be triggered, defaults to `connect`, valid choices are `connect`, `helo`, `ehlo`, `starttls`, `auth`, `mail-from`, `rcpt-to` and `quit`. Note that `quit` will result in a message at the end of a session and may only be used to warn sender that score is degrading as it will not prevent transactions from succeeding.
 
-`-junkAbove` will prepend the 'X-Spam: yes' header to messages.
+`-junkAbove` will prepend the `X-Spam: yes` header to messages.
 
 `-slowFactor` will delay all answers to a score-related percentage of its value in milliseconds. The formula is `delay * score / maxScore` where `delay` is the argument to the `-slowFactor` parameter, `score` is the IP address score, and `maxScore` is the sum of all blocklist domain weights. By default, connections are never delayed.
 

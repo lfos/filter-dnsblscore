@@ -32,7 +32,7 @@ It requires OpenSMTPD 6.6.0 or higher.
 Clone the repository, build and install the filter:
 ```
 $ cd filter-dnsblscore/
-$ go build
+$ go build filter-dnsblscore.go
 $ doas install -m 0555 filter-dnsblscore /usr/local/bin/filter-dnsblscore
 ```
 

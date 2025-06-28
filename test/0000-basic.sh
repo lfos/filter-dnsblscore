@@ -25,32 +25,67 @@ test_run 'initialization' '
 	test_cmp actual expected
 '
 
-test_run 'test behavior with invalid stream' '
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 1 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
+test_run 'test behavior with no blocklists defined' '
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 50 >&2; [ "$?" -eq 1 ]
 	config|ready
-	invalid|0.5|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.2.3.4:33174|1.1.1.1:25
+	report|0.5|0|smtp-in|link-connect
+	EOD
+'
+
+test_run 'test behavior with invalid blocklist format' '
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 50 some.domain.com >&2; [ "$?" -eq 1 ]
+	config|ready
+	report|0.5|0|smtp-in|link-connect
+	EOD
+'
+
+test_run 'test behavior with negative blocklist weight' '
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 50 some.domain.com:-20 >&2; [ "$?" -eq 1 ]
+	config|ready
+	report|0.5|0|smtp-in|link-connect
+	EOD
+'
+
+test_run 'test behavior with a single valid blocklist' '
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 50 some.domain.com:20 >&2
+	config|ready
+	report|0.5|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.2.3.60:33174|1.1.1.1:25
+	EOD
+'
+
+test_run 'test behavior with a multiple valid blocklists' '
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 50 some.domain.com:20 another.domain.com:40 >&2
+	config|ready
+	report|0.5|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.2.3.60:33174|1.1.1.1:25
+	EOD
+'
+
+test_run 'test behavior with invalid stream' '
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 50 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
+	config|ready
+	invalid|0.5|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.2.3.60:33174|1.1.1.1:25
 	EOD
 '
 
 test_run 'test behavior with invalid phase' '
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 1 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 50 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
 	config|ready
-	report|0.5|0|smtp-in|invalid|7641df9771b4ed00||pass|1.2.3.4:33174|1.1.1.1:25
+	report|0.5|0|smtp-in|invalid|7641df9771b4ed00||pass|1.2.3.60:33174|1.1.1.1:25
 	EOD
 '
 
 test_run 'test behavior with too few atoms' '
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 1 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 50 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
 	config|ready
 	report|0.5|0|smtp-in|link-connect
 	EOD
 '
 
 test_run 'test behavior with invalid session ID' '
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 1 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 50 $FILTER_DOMAINS >&2; [ "$?" -eq 1 ]
 	config|ready
-	report|0.5|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.2.3.4:33174|1.1.1.1:25
-	filter|0.5|0|smtp-in|connect|7641df9771b4ed01|1ef1c203cc576e5d||pass|1.2.3.4:33174|1.1.1.1:25
+	report|0.5|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.2.3.60:33174|1.1.1.1:25
+	filter|0.5|0|smtp-in|connect|7641df9771b4ed01|1ef1c203cc576e5d||pass|1.2.3.60:33174|1.1.1.1:25
 	EOD
 '
 

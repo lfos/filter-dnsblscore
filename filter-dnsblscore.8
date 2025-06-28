@@ -24,19 +24,21 @@
 .Op Fl junkAbove  Ar score
 .Op Fl slowFactor Ar factor
 .Op Fl scoreHeader
-.Ar <domain>...
+.Ar <domain>:<weight>...
 .Sh DESCRIPTION
 The
 .Nm
 filter for the OpenSMTPD
 .Pq Xr smtpd 8
-server filters sessions based on DNSBL queries.
-Its options are:
+server filters sessions based on DNSBL queries. Each blocklist can be assigned
+a positive weight, and each connecting IP address is assigned a score
+calculated as the sum of the weights of blocklists the IP address is found on.
+Options are:
 .Bl -tag -width scoreHeader
 .It Fl blockAbove Ar score
-Displays an error banner for sessions on more than
+Displays an error banner for sessions with a score higher than
 .Ar score
-blocklists and then disconnects.
+and then disconnects.
 .It Fl blockPhase Ar phase
 Determines at which phase
 .Fl blockAbove
@@ -56,21 +58,20 @@ and
 Note that
 .Ar quit
 will result in a message at the end of a session and may only be used to warn
-the sender that its reputation is degrading, as it will not prevent transactions
+the sender that its score is degrading, as it will not prevent transactions
 from succeeding.
 .It Fl junkAbove Ar score
 Prepends a
 .Ql X-Spam: yes
-header to messages for sessions on more than
-.Ar score
-blocklists.
+header to messages for sessions with a score higher than
+.Ar score .
 .It Fl slowFactor Ar factor
 Delays all answers by this many milliseconds, where
 .Ql score
 is the blocklist score and
-.Ql domains
-is the total number of blocklists.
-.Dl factor \(** score \(di domains
+.Ql maxScore
+is the sum of all blocklist weights.
+.Dl factor \(** score \(di maxScore
 .It Fl scoreHeader
 Adds an
 .Ql X-DNSBL-Score
@@ -86,11 +87,11 @@ enables
 for all incoming connections.
 .Bd -literal
 filter "dnsblscore" proc-exec \\
-       "/usr/local/bin/filter-dnsblscore -blockAbove 1 \\
+       "/usr/local/bin/filter-dnsblscore -blockAbove 50 \\
                                          -junkAbove  0 \\
                                          -slowFactor 1000 \\
-                                         b.barracudacentral.org \\
-                                         bl.spamcop.net"
+                                         b.barracudacentral.org:60 \\
+                                         bl.spamcop.net:40"
 
 listen on all filter "dnsblscore"
 .Ed

@@ -30,11 +30,12 @@ import (
 	"time"
 )
 
-var domains []string
-var blockAbove *int
+var domainWeights = make(map[string]int64)
+var maxScore int64
+var blockAbove *int64
 var blockPhase *string
-var junkAbove *int
-var slowFactor *int
+var junkAbove *int64
+var slowFactor *int64
 var scoreHeader *bool
 var allowlistFile *string
 var testMode *bool
@@ -48,9 +49,9 @@ var outputChannel chan string
 type session struct {
 	id string
 
-	score    int8
+	score    int64
 
-	delay      int
+	delay      int64
 	first_line bool
 }
 
@@ -120,16 +121,16 @@ func linkConnect(phase string, sessionId string, params []string) {
 		}
 		score, _ = strconv.ParseInt(atoms[3], 10, 8)
 	} else {
-		for _, domain := range domains {
+		for domain, weight := range domainWeights {
 			addrs, err := net.LookupIP(fmt.Sprintf("%s.%s.%s.%s.%s",
 				atoms[3], atoms[2], atoms[1], atoms[0], domain))
 			if err == nil && len(addrs) > 0 {
-				score += 1
+				score += weight
 			}
 		}
 	}
 
-	s.score = int8(score)
+	s.score = score
 }
 
 func linkDisconnect(phase string, sessionId string, params []string) {
@@ -151,15 +152,15 @@ func filterConnect(phase string, sessionId string, params []string) {
 	s := getSession(sessionId)
 
 	if *slowFactor > 0 && s.score > 0 {
-		s.delay = *slowFactor * int(s.score) / len(domains)
+		s.delay = *slowFactor * s.score / maxScore
 	} else {
 		// no slow factor or neutral IP address
 		s.delay = 0
 	}
 
-	if s.score != -1 && int8(*blockAbove) >= 0 && s.score > int8(*blockAbove) && *blockPhase == "connect" {
+	if s.score != -1 && *blockAbove >= 0 && s.score > *blockAbove && *blockPhase == "connect" {
 		delayedDisconnect(sessionId, params)
-	} else if s.score != -1 && int8(*junkAbove) >= 0 && s.score > int8(*junkAbove) {
+	} else if s.score != -1 && *junkAbove >= 0 && s.score > *junkAbove {
 		delayedJunk(sessionId, params)
 	} else {
 		delayedProceed(sessionId, params)
@@ -204,7 +205,7 @@ func dataline(phase string, sessionId string, params []string) {
 func delayedAnswer(phase string, sessionId string, params []string) {
 	s := getSession(sessionId)
 
-	if s.score != -1 && int8(*blockAbove) >= 0 && s.score > int8(*blockAbove) && *blockPhase == phase {
+	if s.score != -1 && *blockAbove >= 0 && s.score > *blockAbove && *blockPhase == phase {
 		delayedDisconnect(sessionId, params)
 		return
 	}
@@ -242,7 +243,7 @@ func delayedDisconnect(sessionId string, params []string) {
 	}
 }
 
-func waitThenAction(sessionId string, token string, delay int, format string, a ...interface{}) {
+func waitThenAction(sessionId string, token string, delay int64, format string, a ...interface{}) {
 	if delay > 0 {
 		time.Sleep(time.Duration(delay) * time.Millisecond)
 	}
@@ -334,22 +335,33 @@ func loadAllowlists() {
 func main() {
 	flag.Usage = func() {
 		w := flag.CommandLine.Output()
-		fmt.Fprintf(w, "Usage of %s: [<flags>] <domain>...\n", os.Args[0])
+		fmt.Fprintf(w, "Usage of %s: [<flags>] <domain>:<weight>...\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 
-	blockAbove = flag.Int("blockAbove", -1, "score below which session is blocked")
+	blockAbove = flag.Int64("blockAbove", -1, "score below which session is blocked")
 	blockPhase = flag.String("blockPhase", "connect", "phase at which blockAbove triggers")
-	junkAbove = flag.Int("junkAbove", -1, "score below which session is junked")
-	slowFactor = flag.Int("slowFactor", -1, "delay factor to apply to sessions")
+	junkAbove = flag.Int64("junkAbove", -1, "score below which session is junked")
+	slowFactor = flag.Int64("slowFactor", -1, "delay factor to apply to sessions")
 	scoreHeader = flag.Bool("scoreHeader", false, "add X-DNSBL-Score header")
 	allowlistFile = flag.String("allowlist", "", "file containing a list of IP addresses or subnets in CIDR notation to allowlist, one per line")
 	testMode = flag.Bool("testMode", false, "skip all DNS queries, process all requests sequentially, only for debugging purposes")
 
 	flag.Parse()
-	domains = flag.Args()
-
-	if len(domains) == 0 {
+	for _, s := range flag.Args() {
+		tokens := strings.Split(s, ":")
+		if len(tokens) != 2 {
+			log.Fatalf("invalid domain weight specifier: %q", s)
+		}
+		domain := tokens[0]
+		weight, err := strconv.ParseInt(tokens[1], 10, 8)
+		if err != nil || weight <= 0 {
+			log.Fatalf("invalid domain weight %d for domain %q", weight, domain)
+		}
+		domainWeights[domain] = weight
+		maxScore += weight
+	}
+	if len(domainWeights) == 0 {
 		flag.Usage()
 		log.Fatal("missing blocklist domains")
 	}

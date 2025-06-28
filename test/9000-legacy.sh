@@ -5,7 +5,7 @@
 test_init
 
 test_run 'test with protocol version 0.4' '
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 1 $FILTER_DOMAINS | sed "0,/^register|ready/d" >actual &&
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 50 $FILTER_DOMAINS | sed "0,/^register|ready/d" >actual &&
 	config|ready
 	report|0.4|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.2.3.0:33174|1.1.1.1:25
 	filter|0.4|0|smtp-in|connect|7641df9771b4ed00|1ef1c203cc576e5d||pass|1.2.3.0:33174|1.1.1.1:25
@@ -17,7 +17,7 @@ test_run 'test with protocol version 0.4' '
 '
 
 test_run 'test with protocol version 0.42' '
-	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 1 $FILTER_DOMAINS | sed "0,/^register|ready/d" >actual &&
+	cat <<-EOD | "$FILTER_BIN" $FILTER_OPTS -blockAbove 50 $FILTER_DOMAINS | sed "0,/^register|ready/d" >actual &&
 	config|ready
 	report|0.42|0|smtp-in|link-connect|7641df9771b4ed00||pass|1.2.3.0:33174|1.1.1.1:25
 	filter|0.42|0|smtp-in|connect|7641df9771b4ed00|1ef1c203cc576e5d||pass|1.2.3.0:33174|1.1.1.1:25

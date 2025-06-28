@@ -40,8 +40,8 @@ test_run 'test subnet allowlisting' '
 	filter|0.5|0|smtp-in|connect|7641df9771b4ed01|1ef1c203cc576e5d||pass|2.2.2.2:33174|1.1.1.1:25
 	report|0.5|0|smtp-in|link-connect|7641df9771b4ed02||pass|3.3.3.3:33174|1.1.1.1:25
 	filter|0.5|0|smtp-in|connect|7641df9771b4ed02|1ef1c203cc576e5d||pass|3.3.3.3:33174|1.1.1.1:25
-	report|0.5|0|smtp-in|link-connect|7641df9771b4ed03||pass|1.2.3.4:33174|1.1.1.1:25
-	filter|0.5|0|smtp-in|connect|7641df9771b4ed03|1ef1c203cc576e5d||pass|1.2.3.4:33174|1.1.1.1:25
+	report|0.5|0|smtp-in|link-connect|7641df9771b4ed03||pass|1.2.3.60:33174|1.1.1.1:25
+	filter|0.5|0|smtp-in|connect|7641df9771b4ed03|1ef1c203cc576e5d||pass|1.2.3.60:33174|1.1.1.1:25
 	report|0.5|0|smtp-in|link-connect|7641df9771b4ed04||pass|1.2.2.3:33174|1.1.1.1:25
 	filter|0.5|0|smtp-in|connect|7641df9771b4ed04|1ef1c203cc576e5d||pass|1.2.2.3:33174|1.1.1.1:25
 	report|0.5|0|smtp-in|link-connect|7641df9771b4ed05||pass|2.3.4.5:33174|1.1.1.1:25
